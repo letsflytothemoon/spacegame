@@ -1,0 +1,2 @@
+#!/bin/bash
+g++ *.cpp -o run -std=c++17
