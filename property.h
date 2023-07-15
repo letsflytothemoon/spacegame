@@ -1,16 +1,17 @@
 #pragma once
+#include <ostream>
 
 template <class Id>
-class Prop
+class Property
 {
     typedef typename Id::Type Type;
     Type _value;
 public:
-    Prop(){}
-    Prop(const Type value) : _value(value) {}
+    Property(){}
+    Property(const Type value) : _value(value) {}
     operator Type&() { return _value; }
     operator const Type&() const { return _value; }
-    virtual Prop<Id> operator=(const Type& value)
+    virtual Property<Id> operator=(const Type& value)
     {
         _value = value;
         return *this;
@@ -25,9 +26,9 @@ struct Selector
 };
 
 template <class Id, class ... Args>
-struct Selector<Id, Prop<Id>, Args ...>
+struct Selector<Id, Property<Id>, Args ...>
 {
-    static typename Id::Type Select(const Prop<Id>& prop, const Args& ... args)
+    static typename Id::Type Select(const Property<Id>& prop, const Args& ... args)
     { return prop; }
 };
 
@@ -38,8 +39,22 @@ struct Selector<Id, typename Id::Type>
     { return defaultValue; }
 };
 
+template <class Id, class Some>
+struct Selector<Id, Some>
+{
+    static typename Id::Type Select(const Some& some)
+    { return Id::Type(some); }
+};
+
 template <class Id, class ... Args>
 typename Id::Type Select(const Args& ... args)
 {
     return Selector<Id, Args ...>::Select(args ...);
+}
+
+template <class Id>
+std::ostream& operator <<(std::ostream& stream, const Property<Id>& prop)
+{
+    stream << "\"" << Id::name() << "\" : " << prop.operator typename Id::Type &();
+    return stream;
 }

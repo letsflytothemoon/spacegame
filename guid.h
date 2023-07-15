@@ -4,6 +4,7 @@
 #include <cassert>
 #include <regex>
 #include <random>
+#include <ostream>
 
 class Guid
 {
@@ -43,6 +44,26 @@ public:
         }
     }
 
+    Guid(const std::wstring& string)
+    {
+        assert(regex_match(string, std::wregex(L"[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}")));
+        int i = 0;
+        while(i < 4) part[i++] = 0;
+        i = 0;
+        for(int symbolIndex = 0; symbolIndex < string.size(); symbolIndex ++)
+        {
+            wchar_t symbol = string[symbolIndex];
+            if(symbol == '-') continue;
+
+            char bits = ((inRange(symbol, L'0', L'9') ? symbol - L'0' :  
+                inRange(symbol, L'a', L'f') ? symbol - L'a' + 10 :
+                symbol - L'A' + 10));
+
+            part[3 - (i >> 3)] |= bits << ((7 - (i % 8)) * 4);
+            ++i;
+        }
+    }
+
     static Guid New()
     {
         static std::mt19937 gen((std::random_device())());
@@ -71,4 +92,27 @@ public:
         }
         return resultStream.str();
     }
+
+    operator std::wstring() const
+    {
+        std::wstringstream resultStream;
+        for(int i = 0; i < 32; i++)
+        {
+            if(i == 8 || i == 12 || i == 16 || i == 20) resultStream << '-';
+            resultStream << L"0123456789abcdef"[(part[3 - (i >> 3)] >> ((7 - (i % 8)) * 4)) & 0xf];
+        }
+        return resultStream.str();
+    }
 };
+
+std::ostream& operator <<(std::ostream& stream, const Guid& guid)
+{
+    stream << guid.operator std::string();
+    return stream;
+}
+
+std::wostream& operator <<(std::wostream& stream, const Guid& guid)
+{
+    stream << guid.operator std::wstring();
+    return stream;
+}
