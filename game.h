@@ -1,15 +1,11 @@
 #pragma once
 #include "guid.h"
-#include "property.h"
 #include "vector.h"
 #include "serializable.h"
 
 using namespace vector;
 
 typedef Vector<int, int> VectorT;
-
-
-
 
 std::ostream& operator <<(std::ostream& stream, const VectorT& vector)
 {
@@ -23,69 +19,77 @@ std::wostream& operator <<(std::wostream& stream, const VectorT& vector)
     return stream;
 }
 
-struct IdId
+struct PropId
 {
     typedef Guid Type;
+    Type Id;
     static const char* Name() { return "id"; }
-    static Type DefaultValue() { return Guid::New(); }
+    PropId() : Id(0, 0, 0, 0) { }
+    operator Type&() { return Id; }
+    operator const Type&() const { return Id; }
 };
 
-struct PositionId
+struct PropPosition
 {
     typedef VectorT Type;
+    Type Position;
     static const char* Name() { return "position"; }
-    static Type DefaultValue() { return VectorT(0, 0); }
+    PropPosition() : Position(0, 0) { }
+    operator Type&() { return Position; }
+    operator const Type&() const { return Position; }
 };
 
-struct SpeedId
+struct PropSpeed
 {
     typedef VectorT Type;
+    Type Speed;
     static const char* Name() { return "speed"; }
-    static Type DefaultValue() { return VectorT(0, 0); }
+    PropSpeed() : Speed(0, 0) { }
+    operator Type&() { return Speed; }
+    operator const Type&() const { return Speed; }
 };
 
-struct MassId
+struct PropMass
 {
     typedef int Type;
+    Type Mass;
     static const char* Name() { return "mass"; }
-    static Type DefaultValue() { return 0; }
+    PropMass() : Mass(0) { }
+    operator Type&() { return Mass; }
+    operator const Type&() const { return Mass; }
 };
 
-struct RadiusId
+struct PropRadius
 {
     typedef int Type;
+    Type Radius;
     static const char* Name() { return "radius"; }
-    static Type DefaultValue() { return 0; }
+    PropRadius() : Radius(0) { }
+    operator Type&() { return Radius; }
+    operator const Type&() const { return Radius; }
 };
 
-template <class ... PropIds>
-class SpaceGameObject : protected Property<IdId>
+//----------------------------------------------------------------------------
+class SpaceGameObject : public Inherits<PropId>, public Serializable
 {
 public:
-    Property<IdId>& Id;
-    SpaceGameObject() :
-    Id((Property<IdId>&)*this)
-    {}
+    typedef TypesList<PropId> PropTypes;
+    void Serialize(std::ostream& stream) const override
+    { Serializer<PropTypes>::Do(stream, *this); }
+
+    void Serialize(std::wostream& stream) const override
+    { Serializer<PropTypes>::Do(stream, *this); }
 };
 
-template <class Id, class ... PropsIds>
-class SpaceGameObject : public SpaceGameObject
-{
 
-};
 
-class PhysicalObject : public SpaceGameObject<PositionId, SpeedId, MassId, RadiusId>
+class PhysicalObject : public Inherits<SpaceGameObject, PropPosition, PropSpeed, PropMass, PropRadius>
 {
 public:
-    VectorT&            Position;
-    Property<SpeedId>&  Speed;
-    Property<MassId>&   Mass;
-    Property<RadiusId>& Radius;
+    typedef PropTypes::Concat<PropPosition, PropSpeed, PropMass, PropRadius>::Result PropTypes;
+    void Serialize(std::ostream& stream) const override
+    { Serializer<PropTypes>::Do(stream, *this); }
 
-    PhysicalObject() :
-    Position((Property<PositionId>&)*this),
-    Speed((Property<SpeedId>&)*this),
-    Mass(*this),
-    Radius(*this)
-    {}
+    void Serialize(std::wostream& stream) const override
+    { Serializer<PropTypes>::Do(stream, *this); }
 };
