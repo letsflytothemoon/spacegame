@@ -4,16 +4,22 @@
 #include "guid.h"
 #include "game.h"
 
-int main(int argc, char**argv)
+int main()
 {
-    PhysicalObject physiaclObject;
-    physiaclObject.Id = Guid::New();
-    physiaclObject.Mass = 100;
-    
-    physiaclObject.Speed = VectorT(10, 33);
-    physiaclObject.Position.at<0>() = 74;
-    physiaclObject.Position.at<1>() = 77;
+    SpaceGameObject spaceGameObject;
+    spaceGameObject.Id = Guid::New();
 
-    std::cout << physiaclObject.Serialize() << std::endl;
+    PhysicalObject physicalObject;
+
+    physicalObject.GetProp<IdId>() = Guid::New();
+    physicalObject.GetProp<MassId>() = 100;
+    physicalObject.GetProp<SpeedId>() = VectorT(10, 33);
+    physicalObject.GetProp<PositionId>() = VectorT(12,77);
+
+    //SpaceGameObject<>& some = physicalObject;
+
+    std::wcout << spaceGameObject << std::endl;
+    std::wcout << physicalObject << std::endl;
+
     return 0;
 }
