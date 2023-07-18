@@ -1,6 +1,5 @@
 #pragma once
 #include <ostream>
-#include "property.h"
 
 template <class ... Types>
 struct TypesList
@@ -17,15 +16,6 @@ struct TypesList
         typedef T<Types ...> Result;
     };
 };
-
-//-----------------------------------------------------------------------
-template <class ... NoMatter>
-struct Inherits
-{ };
-
-template <class T, class ... Nexts>
-struct Inherits<T, Nexts ...> : T, Inherits<Nexts ...>
-{ };
 
 //-----------------------------------------------------------------------
 template <class ChatR>
@@ -52,6 +42,53 @@ struct JsonStrings<wchar_t>
 };
 
 //-----------------------------------------------------------------------
+
+template <class T>
+struct JsonFormatter
+{
+    const T& _value;
+    JsonFormatter(const T& value) : _value(value) { }
+    template <class CharT>
+    void Serialize(std::basic_ostream<CharT>& stream) const
+    { stream << _value; }
+};
+
+template <class T, class CharT>
+std::basic_ostream<CharT>& operator << (std::basic_ostream<CharT>& stream, const JsonFormatter<T>& formatter)
+{ 
+    formatter.Serialize(stream);
+    return stream;
+}
+
+template <>
+struct JsonFormatter<Guid>
+{
+    const Guid& _value;
+    JsonFormatter(const Guid& value) : _value(value) { }
+    template <class CharT>
+    void Serialize(std::basic_ostream<CharT>& stream) const
+    { stream << JsonStrings<CharT>::Quot() << _value << JsonStrings<CharT>::Quot(); }
+};
+
+template <class CharT>
+struct JsonFormatter<std::basic_string<CharT>>
+{
+    const std::basic_string<CharT>& _value;
+    JsonFormatter(const std::basic_string<CharT>& value) : _value(value) { }
+    
+    //todo: need to add escaping
+    void Serialize(std::basic_ostream<CharT>& stream) const
+    { stream << JsonStrings<CharT>::Quot() << _value << JsonStrings<CharT>::Quot(); }
+};
+
+template <class T>
+JsonFormatter<T> JsonFormat(const T& object)
+{
+    return JsonFormatter<T>(object);
+}
+
+
+//-----------------------------------------------------------------------
 class Serializable
 {
 protected:
@@ -68,15 +105,15 @@ protected:
         }
     };
 
-    template <class PropT, class ... Nexts>
-    struct Serializer<TypesList<PropT, Nexts ...>>
+    template <class PropDescriptorT, class ... Nexts>
+    struct Serializer<TypesList<PropDescriptorT, Nexts ...>>
     {
         template <class CharT, class U>
         static void Do(std::basic_ostream<CharT>& stream, const U& object, int num = 0)
         {
             stream << (num != 0 ? JsonStrings<CharT>::Separator() : JsonStrings<CharT>::OpenBrace());
-            stream << JsonStrings<CharT>::Quot() << ((const PropT&)object).Name() << JsonStrings<CharT>::Quot();
-            stream << JsonStrings<CharT>::Colon() << (typename PropT::Type&)(PropT&)object;
+            stream << JsonStrings<CharT>::Quot() << (const CharT*)PropDescriptorT() << JsonStrings<CharT>::Quot();
+            stream << JsonStrings<CharT>::Colon() << JsonFormat(PropDescriptorT::Value(object));
             Serializer<TypesList<Nexts ...>>::Do(stream, object, num + 1);
         }
     };

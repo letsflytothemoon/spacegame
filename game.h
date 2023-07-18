@@ -19,77 +19,68 @@ std::wostream& operator <<(std::wostream& stream, const VectorT& vector)
     return stream;
 }
 
-struct PropId
+struct IdPropDescriptor
 {
-    typedef Guid Type;
-    Type Id;
-    static const char* Name() { return "id"; }
-    PropId() : Id(0, 0, 0, 0) { }
-    operator Type&() { return Id; }
-    operator const Type&() const { return Id; }
+    operator const char*() const { return "id"; }
+    operator const wchar_t*() const{ return L"id"; }
+    template <class T> static Guid& Value(T& object) { return object.id; }
+    template <class T> static const Guid& Value(const T& object) { return object.id; }
 };
 
-struct PropPosition
+struct PositionPropDescriptor
 {
-    typedef VectorT Type;
-    Type Position;
-    static const char* Name() { return "position"; }
-    PropPosition() : Position(0, 0) { }
-    operator Type&() { return Position; }
-    operator const Type&() const { return Position; }
+    operator const char*() { return "position"; }
+    operator const wchar_t*() { return L"position"; }
+    template <class T> static VectorT& Value(T& object) { return object.position; }
+    template <class T> static const VectorT& Value(const T& object) { return object.position; }
 };
 
-struct PropSpeed
+struct SpeedPropDescriptor
 {
-    typedef VectorT Type;
-    Type Speed;
-    static const char* Name() { return "speed"; }
-    PropSpeed() : Speed(0, 0) { }
-    operator Type&() { return Speed; }
-    operator const Type&() const { return Speed; }
+    operator const char*() { return "speed"; }
+    operator const wchar_t*() { return L"speed"; }
+    template <class T> static VectorT& Value(T& object) { return object.speed; }
+    template <class T> static const VectorT& Value(const T& object) { return object.speed; }
 };
 
-struct PropMass
+struct MassPropDescriptor
 {
-    typedef int Type;
-    Type Mass;
-    static const char* Name() { return "mass"; }
-    PropMass() : Mass(0) { }
-    operator Type&() { return Mass; }
-    operator const Type&() const { return Mass; }
+    operator const char*() { return "mass"; }
+    operator const wchar_t*() { return L"mass"; }
+    template <class T> static int& Value(T& object) { return object.mass; }
+    template <class T> static const int& Value(const T& object) { return object.mass; }
 };
 
-struct PropRadius
+struct RadiusPropDescriptor
 {
-    typedef int Type;
-    Type Radius;
-    static const char* Name() { return "radius"; }
-    PropRadius() : Radius(0) { }
-    operator Type&() { return Radius; }
-    operator const Type&() const { return Radius; }
+    operator const char*() { return "radius"; }
+    operator const wchar_t*() { return L"radius"; }
+    template <class T> static int& Value(T& object) { return object.radius; }
+    template <class T> static const int& Value(const T& object) { return object.radius; }
 };
 
 //----------------------------------------------------------------------------
-class SpaceGameObject : public Inherits<PropId>, public Serializable
+class SpaceGameObject : public Serializable
 {
+protected:
+    typedef TypesList<IdPropDescriptor> PropDescriptorsTypesList;
 public:
-    typedef TypesList<PropId> PropTypes;
-    void Serialize(std::ostream& stream) const override
-    { Serializer<PropTypes>::Do(stream, *this); }
-
-    void Serialize(std::wostream& stream) const override
-    { Serializer<PropTypes>::Do(stream, *this); }
+    Guid id;
+    void Serialize(std::ostream& stream) const override { Serializer<PropDescriptorsTypesList>::Do(stream, *this); }
+    void Serialize(std::wostream& stream) const override { Serializer<PropDescriptorsTypesList>::Do(stream, *this); }
 };
 
 
 
-class PhysicalObject : public Inherits<SpaceGameObject, PropPosition, PropSpeed, PropMass, PropRadius>
+class PhysicalObject : public SpaceGameObject
 {
+protected:
+    typedef typename PropDescriptorsTypesList::Concat<PositionPropDescriptor, SpeedPropDescriptor, MassPropDescriptor, RadiusPropDescriptor>::Result PropDescriptorsTypesList;
 public:
-    typedef PropTypes::Concat<PropPosition, PropSpeed, PropMass, PropRadius>::Result PropTypes;
-    void Serialize(std::ostream& stream) const override
-    { Serializer<PropTypes>::Do(stream, *this); }
-
-    void Serialize(std::wostream& stream) const override
-    { Serializer<PropTypes>::Do(stream, *this); }
+    VectorT position;
+    VectorT speed;
+    int     mass;
+    int     radius;
+    void Serialize(std::ostream& stream) const override { Serializer<PropDescriptorsTypesList>::Do(stream, *this); }
+    void Serialize(std::wostream& stream) const override { Serializer<PropDescriptorsTypesList>::Do(stream, *this); }
 };

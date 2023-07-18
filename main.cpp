@@ -1,6 +1,5 @@
 #include <iostream>
 #include "vector.h"
-#include "property.h"
 #include "guid.h"
 #include "game.h"
 
@@ -13,6 +12,8 @@ int main()
     
     std::cout << physicalObject << std::endl;
     std::cout << ref << std::endl;
+
+    
 
     return 0;
 }
