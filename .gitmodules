@@ -1,0 +1,3 @@
+[submodule "somelib"]
+	path = somelib
+	url = git@github.com:letsflytothemoon/somelib.git
