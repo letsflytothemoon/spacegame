@@ -59,7 +59,7 @@ std::basic_ostream<CharT>& operator << (std::basic_ostream<CharT>& stream, const
     formatter.Serialize(stream);
     return stream;
 }
-
+/*
 template <>
 struct JsonFormatter<Guid>
 {
@@ -68,7 +68,7 @@ struct JsonFormatter<Guid>
     template <class CharT>
     void Serialize(std::basic_ostream<CharT>& stream) const
     { stream << JsonStrings<CharT>::Quot() << _value << JsonStrings<CharT>::Quot(); }
-};
+};*/
 
 template <class CharT>
 struct JsonFormatter<std::basic_string<CharT>>
@@ -123,14 +123,5 @@ public:
 };
 
 //-----------------------------------------------------------------------
-std::ostream& operator <<(std::ostream& stream, const Serializable& serializable)
-{
-    serializable.Serialize(stream);
-    return stream;
-}
-
-std::wostream& operator <<(std::wostream& stream, const Serializable& serializable)
-{
-    serializable.Serialize(stream);
-    return stream;
-}
+std::ostream& operator <<(std::ostream& stream, const Serializable& serializable);
+std::wostream& operator <<(std::wostream& stream, const Serializable& serializable);

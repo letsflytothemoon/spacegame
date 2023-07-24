@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vector
+namespace SpaceGameMath
 {
     template <class ... Types>
     class Vector
@@ -14,8 +14,10 @@ namespace vector
         Vector<> operator -=(const Vector<>&) { return *this; }
         Vector<> operator *=(const Vector<>&) { return *this; }
         
-        template <class T> Vector<> operator *=(const T&) { return *this; }
-        template <class T> Vector<> operator /=(const T&) { return *this; }
+        template <class T> Vector<>& operator *=(const T&) { return *this; }
+        template <class T> Vector<>& operator /=(const T&) { return *this; }
+        template <class T> Vector<> operator *(const T&) const { return Vector<>(); }
+        template <class T> Vector<> operator /(const T&) const { return Vector<>(); }
     };
 
     template <int I, class T, class ... Nexts>

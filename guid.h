@@ -6,6 +6,7 @@
 #include <random>
 #include <ostream>
 
+
 class Guid
 {
     template <class T>
@@ -70,16 +71,40 @@ public:
         return Guid(gen(), gen(), gen(), gen());
     }
 
-    bool operator ==(const Guid& other)
+    bool operator ==(const Guid& other) const
     {
         return part[0] == other.part[0] && part[1] == other.part[1] &&
                 part[2] == other.part[2] && part[3] == other.part[3];
     }
 
-    bool operator !=(const Guid& other)
+    bool operator !=(const Guid& other) const
     {
         return part[0] != other.part[0] || part[1] != other.part[1] ||
                 part[2] != other.part[2] || part[3] != other.part[3];
+    }
+
+    bool operator <(const Guid& other) const
+    {
+        if(part[3] < other.part[3]) return true;
+        if(part[3] > other.part[3]) return false;
+        if(part[2] < other.part[2]) return true;
+        if(part[2] > other.part[2]) return false;
+        if(part[1] < other.part[1]) return true;
+        if(part[1] > other.part[1]) return false;
+        if(part[0] < other.part[0]) return true;
+        return false;
+    }
+
+    bool operator >(const Guid& other) const
+    {
+        if(part[3] < other.part[3]) return true;
+        if(part[3] > other.part[3]) return false;
+        if(part[2] < other.part[2]) return true;
+        if(part[2] > other.part[2]) return false;
+        if(part[1] < other.part[1]) return true;
+        if(part[1] > other.part[1]) return false;
+        if(part[0] < other.part[0]) return true;
+        return false;
     }
 
     operator std::string() const
@@ -104,15 +129,3 @@ public:
         return resultStream.str();
     }
 };
-
-std::ostream& operator <<(std::ostream& stream, const Guid& guid)
-{
-    stream << guid.operator std::string();
-    return stream;
-}
-
-std::wostream& operator <<(std::wostream& stream, const Guid& guid)
-{
-    stream << guid.operator std::wstring();
-    return stream;
-}
