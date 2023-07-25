@@ -15,31 +15,31 @@ int main()
 {
     SpaceGameServer spaceGameServer;
     spaceGameServer.Add<PhysicalObject>(
-        VectorT(  0,  1000),
-        VectorT( 10,     0),
-        1,
-        10
+        Position(VectorT(  0,  1000)),
+        Speed   (VectorT( 10,     0)),
+        Mass    (1),
+        Radius  (10)
     );
 
     spaceGameServer.Add<PhysicalObject>(
-        VectorT(  0, -1000),
-        VectorT(-10,    10),
-        1,
-        10
+        Position(VectorT(  0, -1000)),
+        Speed   (VectorT(-10,    10)),
+        Mass    (1),
+        Radius  (10)
     );
 
     spaceGameServer.Add<PhysicalObject>(
-        VectorT(100,     0),
-        VectorT(  0,    -1),
-        10,
-        20
+        Position(VectorT(100,     0)),
+        Speed   (VectorT(  0,    -1)),
+        Mass    (10),
+        Radius  (20)
     );
 
     spaceGameServer.Add<PhysicalObject>(
-        VectorT(-1000,   0),
-        VectorT(    0,   2),
-        5,
-        15
+        Position(VectorT(-1000,   0)),
+        Speed   (VectorT(    0,   2)),
+        Mass    (5),
+        Radius  (15)
     );
     
     RequestProcessor requestProcessor(spaceGameServer);

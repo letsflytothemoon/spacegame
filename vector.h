@@ -149,10 +149,6 @@ namespace SpaceGameMath
         }
     };
 
-    template <class L, class R>
-    Vector<L, R> operator ,(const L& l, const R& r)
-    { return Vector<L, R>(l, r); }
-
     template <class ... Args>
     Vector<Args ...> MakeVector(const Args& ... args)
     { return Vector<Args ...>(args ...); }

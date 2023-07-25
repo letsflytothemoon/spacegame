@@ -1,127 +1,145 @@
 #pragma once
-#include <ostream>
+#include <string>
+#include <iostream>
+#include <locale>
+#include <codecvt>
 
-template <class ... Types>
-struct TypesList
-{
-    template <class ... AdditionalTypes>
-    struct Concat
-    {
-        typedef TypesList<Types ..., AdditionalTypes ...> Result;
-    };
-
-    template <template <class ...> class T>
-    struct Template
-    {
-        typedef T<Types ...> Result;
-    };
-};
-
-//-----------------------------------------------------------------------
-template <class ChatR>
-struct JsonStrings {};
+template <class CharT>
+struct JsonSymbol
+{};
 
 template <>
-struct JsonStrings<char>
+struct JsonSymbol<char>
 {
-    static const char* OpenBrace()  { return "{ "; }
-    static const char* Separator()  { return ", "; }
-    static const char* CloseBrace() { return " }"; }
-    static const char* Colon()      { return " : "; }
-    static const char* Quot()       { return "\""; }
+    static constexpr const char* OpenBrace  = "{";
+    static constexpr const char* Comma      = ",";
+    static constexpr const char* CloseBrace = "}";
+    static constexpr const char* Colon      = ":";
+    static constexpr const char* Quot       = "\"";
 };
 
 template <>
-struct JsonStrings<wchar_t>
+struct JsonSymbol<wchar_t>
 {
-    static const wchar_t* OpenBrace()  { return L"{ "; }
-    static const wchar_t* Separator()  { return L", "; }
-    static const wchar_t* CloseBrace() { return L" }"; }
-    static const wchar_t* Colon()      { return L" : "; }
-    static const wchar_t* Quot()       { return L"\""; }
+    static constexpr const wchar_t* OpenBrace  = L"{";
+    static constexpr const wchar_t* Comma      = L",";
+    static constexpr const wchar_t* CloseBrace = L"}";
+    static constexpr const wchar_t* Colon      = L":";
+    static constexpr const wchar_t* Quot       = L"\"";
 };
 
-//-----------------------------------------------------------------------
+template <class SourceCharT, class TargetCharT>
+struct StringsConverter
+{ };
+
+template <class Same>
+struct StringsConverter<Same, Same>
+{
+    static const std::basic_string<Same>& Convert(const std::basic_string<Same>& srcString)
+    { return srcString; }
+};
+
+template <>
+struct StringsConverter<char, wchar_t>
+{
+    static std::wstring Convert(const std::string& srcString)
+    { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(srcString); }
+};
+
+template <>
+struct StringsConverter<wchar_t, char>
+{
+    static std::string Convert(const std::wstring& srcString)
+    { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(srcString); }
+};
 
 template <class T>
 struct JsonFormatter
 {
-    const T& _value;
-    JsonFormatter(const T& value) : _value(value) { }
     template <class CharT>
-    void Serialize(std::basic_ostream<CharT>& stream) const
-    { stream << _value; }
+    static std::basic_ostream<CharT>& PutToStream(std::basic_ostream<CharT>& stream, const T& value)
+    { return stream << value; }
 };
 
-template <class T, class CharT>
-std::basic_ostream<CharT>& operator << (std::basic_ostream<CharT>& stream, const JsonFormatter<T>& formatter)
-{ 
-    formatter.Serialize(stream);
-    return stream;
-}
-/*
 template <>
-struct JsonFormatter<Guid>
+struct JsonFormatter<char*>
 {
-    const Guid& _value;
-    JsonFormatter(const Guid& value) : _value(value) { }
     template <class CharT>
-    void Serialize(std::basic_ostream<CharT>& stream) const
-    { stream << JsonStrings<CharT>::Quot() << _value << JsonStrings<CharT>::Quot(); }
-};*/
-
-template <class CharT>
-struct JsonFormatter<std::basic_string<CharT>>
-{
-    const std::basic_string<CharT>& _value;
-    JsonFormatter(const std::basic_string<CharT>& value) : _value(value) { }
-    
-    //todo: need to add escaping
-    void Serialize(std::basic_ostream<CharT>& stream) const
-    { stream << JsonStrings<CharT>::Quot() << _value << JsonStrings<CharT>::Quot(); }
+    static std::basic_ostream<CharT>& PutToStream(std::basic_ostream<CharT>& stream, const char* value)
+    {
+        //todo: escaping quotes and backslashes
+        return stream << JsonSymbol<CharT>::Quot << StringsConverter<char, CharT>::Convert(value) << JsonSymbol<CharT>::Quot;
+    };
 };
 
-template <class T>
-JsonFormatter<T> JsonFormat(const T& object)
+template <>
+struct JsonFormatter<wchar_t*>
 {
-    return JsonFormatter<T>(object);
-}
+    template <class CharT>
+    static std::basic_ostream<CharT>& PutToStream(std::basic_ostream<CharT>& stream, const wchar_t* value)
+    {
+        //todo: escaping quotes and backslashes
+        return stream << JsonSymbol<CharT>::Quot << StringsConverter<wchar_t, CharT>::Convert(value) << JsonSymbol<CharT>::Quot;
+    };
+};
 
+template <class StringCharT>
+struct JsonFormatter<std::basic_string<StringCharT>>
+{
+    template <class CharT>
+    static std::basic_ostream<CharT>& PutToStream(std::basic_ostream<CharT>& stream, const std::basic_string<StringCharT>& string)
+    {
+        //todo: escaping quotes and backslashes and convertig to char*
+        return stream << JsonSymbol<CharT>::Quot << StringsConverter<StringCharT, CharT>::Convert(string) << JsonSymbol<CharT>::Quot;
+    };
 
-//-----------------------------------------------------------------------
+    template <class CharT>
+    static std::basic_ostream<CharT>* PutToStream(std::basic_ostream<CharT>& stream, const StringCharT* string)
+    {
+        return stream << JsonSymbol<CharT>::Quot << StringsConverter<StringCharT, CharT>::Convert(string) << JsonSymbol<CharT>::Quot;
+    };
+};
+
+template <class ... Types>
+struct SerializablePutter
+{
+    template <class ... Args>
+    static void PutToStream(const Args& ... args) { }
+};
+
+template <class T, class ... Types>
+struct SerializablePutter<T, Types ...>
+{
+    template <class U, class CharT>
+    static void PutToStream(std::basic_ostream<CharT>& stream, const U& object, int num = 0)
+    {
+        if(num > 0) stream << JsonSymbol<CharT>::Comma;
+        JsonFormatter<T>::PutToStream(stream, (const T&)object);
+        SerializablePutter<Types ...>::PutToStream(stream, object, num + 1);
+    };
+};
+
 class Serializable
 {
-protected:
-    template <class NoMatter>
-    struct Serializer { };
-
-    template <class ... Empty>
-    struct Serializer<TypesList<Empty ...>>
-    {
-        template <class CharT, class U>
-        static void Do(std::basic_ostream<CharT>& stream, const U& object, int)
-        {
-            stream << JsonStrings<CharT>::CloseBrace();
-        }
-    };
-
-    template <class PropDescriptorT, class ... Nexts>
-    struct Serializer<TypesList<PropDescriptorT, Nexts ...>>
-    {
-        template <class CharT, class U>
-        static void Do(std::basic_ostream<CharT>& stream, const U& object, int num = 0)
-        {
-            stream << (num != 0 ? JsonStrings<CharT>::Separator() : JsonStrings<CharT>::OpenBrace());
-            stream << JsonStrings<CharT>::Quot() << (const CharT*)PropDescriptorT() << JsonStrings<CharT>::Quot();
-            stream << JsonStrings<CharT>::Colon() << JsonFormat(PropDescriptorT::Value(object));
-            Serializer<TypesList<Nexts ...>>::Do(stream, object, num + 1);
-        }
-    };
 public:
-    virtual void Serialize(std::ostream&) const = 0;
-    virtual void Serialize(std::wostream&) const = 0;
+    virtual void PutToStream(std:: ostream& stream) const { }
+    virtual void PutToStream(std::wostream& stream) const { }
+
+    template <class ... Types, class CharT, class T>
+    static void PutPropsToStream(std::basic_ostream<CharT>& stream, const T& object)
+    {
+        SerializablePutter<Types ...>::PutToStream(stream, object);
+    }
 };
 
-//-----------------------------------------------------------------------
-std::ostream& operator <<(std::ostream& stream, const Serializable& serializable);
-std::wostream& operator <<(std::wostream& stream, const Serializable& serializable);
+template <class CharT>
+std::basic_ostream<CharT>& operator <<(std::basic_ostream<CharT>& stream, const Serializable& serializable)
+{
+    serializable.PutToStream(stream);
+    return stream;
+}
+
+
+
+
+
