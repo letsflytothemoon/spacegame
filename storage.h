@@ -109,6 +109,8 @@ protected:
     std::map<typename KeySelector::KeyType, T*>& GetStorage()
     { return StorageGetter<T, KeySelector, Types ...>::Get(storageTuple); }
 public:
+    typedef typename KeySelector::KeyType KeyType;
+
     template<class T>
     bool Check(const typename KeySelector::KeyType& key)
     {

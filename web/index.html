@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>some space game</title>
+        <script type="text/javascript">
+            let page = {};
+
+            page.objects = [];
+
+            page.Refresh = function() {
+                const canvas = document.getElementById("just-canvas");
+                page.objects.forEach( o => {
+                    const context = canvas.getContext("2d");
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.beginPath();
+                    context.arc(o.x, o.y, o.radius, 0, 2 * Math.PI);
+                    context.stroke();    
+                });
+            };
+
+            page.CreateRequest = function() {
+                let Request = false;
+
+                if(window.XMLHttpRequest) {
+                    Request = new XMLHttpRequest();
+                }
+                else if (window.ActiveXObject)
+                {
+                    try {
+                        Request = new ActiveXObject("Microsoft.XMLHTTP");
+                    }
+                    catch (CatchException) {
+                        Request = new ActiveXObject("Msxml2.XMLHTTP");
+                    }
+                }
+
+                if(!Request) {
+                    console.log("cant create request");
+                }
+
+                return Request;
+            }
+
+            page.GetObjects = function () {
+                const Request = page.CreateRequest();
+                
+                if(!Request) {
+                    return;
+                }
+
+                console.log(".!.");
+
+                Request.onreadystatechange = function () {
+                    if(Request.readyState == 4) {
+                        console.log(JSON.Parse(Request.responseText));
+                        page.objects = JSON.Parse(Request.responseText);
+                    }
+                }
+
+                Request.open("get", "http://localhost/", true);
+
+                Request.send(null);
+            }
+        </script>
+    </head>
+    <body>
+        <canvas id="just-canvas" width="600" height="600">
+
+        </canvas>
+        <script type="text/javascript">
+            let getObjectsTImer = setInterval(page.GetObjects, 100);
+            let refreshTimer = setInterval(page.Refresh, 100);
+        </script>
+    </body>
+</html>
