@@ -1,20 +1,38 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <style>
+            #just-canvas
+            {
+                border-style: solid;
+                border-width: 1px;
+            }
+        </style>
         <title>some space game</title>
         <script type="text/javascript">
             let page = {};
-
+            page.scale = 0.1;
             page.objects = [];
 
             page.Refresh = function() {
                 const canvas = document.getElementById("just-canvas");
+                const context = canvas.getContext("2d");
+                context.clearRect(0, 0, canvas.width, canvas.height);
                 page.objects.forEach( o => {
-                    const context = canvas.getContext("2d");
-                    context.clearRect(0, 0, canvas.width, canvas.height);
                     context.beginPath();
-                    context.arc(o.x, o.y, o.radius, 0, 2 * Math.PI);
-                    context.stroke();    
+                    const x = canvas.width  / 2 + o.position.x * page.scale;
+                    const y = canvas.height / 2 + o.position.y * page.scale;
+                    const r = o.radius * page.scale;
+
+                    context.arc(x, y, r, 0, 2 * Math.PI);
+                    context.stroke();
+                });
+
+                page.objects.forEach( o => {
+                    o.position.x += o.speed.x ;
+                    o.position.y += o.speed.y ;
+                    o.speed.x += o.acceleration.x;
+                    o.speed.y += o.acceleration.y
                 });
             };
 
@@ -39,7 +57,7 @@
                 }
 
                 return Request;
-            }
+            };
 
             page.GetObjects = function () {
                 const Request = page.CreateRequest();
@@ -48,28 +66,42 @@
                     return;
                 }
 
-                console.log(".!.");
-
                 Request.onreadystatechange = function () {
                     if(Request.readyState == 4) {
-                        console.log(JSON.Parse(Request.responseText));
-                        page.objects = JSON.Parse(Request.responseText);
+                        page.objects = JSON.parse(Request.responseText);
                     }
                 }
 
-                Request.open("get", "http://localhost/", true);
+                Request.open("get", "/api/balls", true);
 
                 Request.send(null);
-            }
+            };
+
+            page.MouseWheelHandler = function (e) {
+                let delta = e.deltaY || e.detail || e.wheelDelta;
+                page.scale *= delta < 0 ? 1.414 : 0.707;
+            };
         </script>
     </head>
     <body>
-        <canvas id="just-canvas" width="600" height="600">
+        <canvas id="just-canvas" width="800" height="600">
 
         </canvas>
         <script type="text/javascript">
-            let getObjectsTImer = setInterval(page.GetObjects, 100);
-            let refreshTimer = setInterval(page.Refresh, 100);
+            setInterval(page.GetObjects, 100);
+            setInterval(page.Refresh, 33);
+            
+            const canvasElement = document.getElementById("just-canvas");
+            if("onwheel" in document)
+                canvasElement.addEventListener("wheel", page.MouseWheelHandler);
+            else
+                if("onmousewheel" in document)
+                    canvasElement.addEventListener("mousewheel", page.MouseWheelHandler);
+                else
+                    canvasElement.attachEvent("onmousewheel", page.MouseWheelHandler);
+            
+
+
         </script>
     </body>
 </html>

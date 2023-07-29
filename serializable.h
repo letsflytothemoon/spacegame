@@ -16,6 +16,7 @@ struct JsonSymbol<char>
     static constexpr const char* CloseBrace = "}";
     static constexpr const char* Colon      = ":";
     static constexpr const char* Quot       = "\"";
+    static constexpr const char* Slash      = "/";
 };
 
 template <>
@@ -26,6 +27,7 @@ struct JsonSymbol<wchar_t>
     static constexpr const wchar_t* CloseBrace = L"}";
     static constexpr const wchar_t* Colon      = L":";
     static constexpr const wchar_t* Quot       = L"\"";
+    static constexpr const wchar_t* Slash      = L"/";
 };
 
 template <class SourceCharT, class TargetCharT>
@@ -135,7 +137,9 @@ public:
 template <class CharT>
 std::basic_ostream<CharT>& operator <<(std::basic_ostream<CharT>& stream, const Serializable& serializable)
 {
+    stream << JsonSymbol<CharT>::OpenBrace;
     serializable.PutToStream(stream);
+    stream << JsonSymbol<CharT>::CloseBrace;
     return stream;
 }
 

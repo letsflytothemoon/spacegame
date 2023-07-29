@@ -10,6 +10,11 @@
 #include "game.h"
 #include "serializable.h"
 
+std::ostream& operator<<(std::ostream& stream, const VectorT& vector)
+{
+    return JsonFormatter<VectorT>::PutToStream(stream, vector);
+}
+
 void SpaceGameServer::GameLoop()
 {
     static auto vectorLength = [](const VectorT& vector)
@@ -17,12 +22,13 @@ void SpaceGameServer::GameLoop()
 
     static auto gravitate = [](PhysicalObject& l, PhysicalObject& r)
     {
-        int forceMassMul = l.mass * r.mass; // / pow(length(...), 2)
-        
+        int forceMassMul = l.mass * r.mass / 10; // / pow(length(...), 2)
+
         VectorT positionDifference = r.position - l.position;
+
         double posDiffLength = vectorLength(positionDifference);
 
-        VectorT force = positionDifference * (forceMassMul * 10 / posDiffLength);
+        VectorT force = positionDifference * (forceMassMul / posDiffLength);
 
         l.acceleration += force / l.mass;
         r.acceleration -= force / r.mass;

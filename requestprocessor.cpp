@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <sstream>
+#include <iostream>
 #include "spacegameserver.h"
 
 namespace beast = boost::beast;
@@ -26,15 +27,15 @@ void RequestProcessor::ProcessLoop()
         try
         {
             tcp::socket socket = std::move(gameServer.GetSocketFromQueue());
+
             Request request;
-            Response response;
             Buffer buffer{8192};
-            
+
             http::read(
                 socket,
                 buffer,
                 request);
-            
+
             routing<char>::HttpRequestContext httpRequestContext(
                 std::move(request),
                 std::move(socket));
@@ -43,43 +44,6 @@ void RequestProcessor::ProcessLoop()
                 .router
                 .GetEndPoint(httpRequestContext)
                 .SendResponse(httpRequestContext);
-
-            /*
-            std::vector<std::string> path;
-            boost:split(path, request.target(), boost::is_any_of("/"));
-            path.erase(path.begin());
-            
-            response.version(request.version());
-            response.keep_alive(false);
-            
-            response.set(http::field::content_type, "text/html");
-
-            std::vector<PhysicalObject> vector;
-            {
-                std::lock_guard<std::mutex> lock_guard(gameServer.storageMutex);
-                std::map<Guid, PhysicalObject*>& map = gameServer.GetStorage<PhysicalObject>();
-                
-                
-                for(auto i = map.begin(); i != map.end(); i++)
-                    vector.push_back(*i->second);
-            }
-
-            std::stringstream stringStream;
-            stringStream << "[ ";
-            for(int i = 0; i < vector.size(); i++)
-            {
-                if(i > 0) stringStream << ", ";
-                stringStream << vector[i];
-            }
-            stringStream << " ]";
-
-            beast::ostream(response.body()) << stringStream.str();
-
-            response.content_length(response.body().size());
-            http::write(
-                socket,
-                response);
-            */
         }
         catch(std::exception const& exception)
         {

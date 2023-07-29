@@ -1,9 +1,11 @@
 #pragma once
+#include <boost/core/demangle.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/asio.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
+#include <fstream>
 #include <queue>
 #include <map>
 #include <string>
@@ -21,34 +23,32 @@ struct routing
     using Response = http::response<http::dynamic_body>;
 
     typedef std::basic_string<CharT> StringT;
+    class NotFoundException : public std::exception
+    {
+    public:
+        const char* what() const noexcept override
+        { return "404 - not found"; }
+    };
 
     class Router;
     class RouterEndPoint;
     class StaticDirectoryEndPoint;
     class StaticDocumentEndPoint;
-    template <class ControllerT, class MethodPtr>
+    template <class Callable, class Controller>
     class ApiEndPoint;    
 
     class HttpRequestContext
     {
-        friend class RouterEndPoint;
-        template <class ControllerT, class MethodPtr>
-        friend class ApiEndPoint;
-    protected:
+    public:
         std::queue<StringT> route;
         Request request;
         tcp::socket socket;
-    public:
         std::basic_stringstream<CharT> responseStream;
 
         HttpRequestContext(Request _request, tcp::socket _socket) :
         request (std::move(_request)),
         socket  (std::move(_socket ))
         {
-            beast::basic_flat_buffer<std::allocator<CharT>> buffer {8192};
-            
-            http::read(socket, buffer, request);
-
             std::vector<StringT> path;
 
             boost::split(path, request.target(), boost::is_any_of("/"));
@@ -83,6 +83,11 @@ struct routing
         routes(init)
         { }
 
+        template <class ... Args>
+        RouterNode(Args&& ... args) :
+        routes(args ...)
+        { }
+
         ~RouterNode()
         {
             for(auto i = routes.begin(); i != routes.end(); i++)
@@ -90,7 +95,16 @@ struct routing
         }
 
         RouterEndPoint& GetEndPoint(HttpRequestContext& context) override
-        { return routes[context.GetRouteNode()]->GetEndPoint(context); }
+        {
+            StringT pathStep = context.GetRouteNode();
+            auto i = routes.find(pathStep);
+            if(i == routes.end())
+            {
+                context.socket.shutdown(tcp::socket::shutdown_send);
+                throw NotFoundException();
+            }
+            return i->second->GetEndPoint(context);
+        }
     };
 
     class RouterEndPoint : public Router
@@ -110,34 +124,86 @@ struct routing
         { }
 
         void SendResponse(HttpRequestContext& context) override
-        { }
+        {
+            std::basic_stringstream<CharT> pathStringStream;
+            pathStringStream << dirName;
+
+            while(!context.route.empty())
+            {
+
+                StringT pathStep = context.route.front();
+                context.route.pop();
+                if(pathStep == "..")
+                {
+                    context.socket.shutdown(tcp::socket::shutdown_send);
+                    throw NotFoundException();
+                }
+                pathStringStream << JsonSymbol<CharT>::Slash << pathStep;
+            }
+
+            std::ifstream fstream(pathStringStream.str());
+            context.responseStream << fstream.rdbuf();
+
+            Response response;
+            response.version(context.request.version());
+            response.keep_alive(false);
+
+            beast::ostream(response.body()) << context.responseStream.str();
+
+            response.content_length(response.body().size());
+
+            http::write(
+                context.socket,
+                response);
+            
+            context.socket.shutdown(tcp::socket::shutdown_send);
+        }
     };
 
     class StaticDocumentEndPoint : public RouterEndPoint
     {
-        StringT fileName;
+        StringT _fileName;
     public:
-        StaticDocumentEndPoint(StringT _fileName) : fileName(std::move(_fileName))
+        StaticDocumentEndPoint(StringT fileName) : _fileName(std::move(fileName))
         { }
         
         void SendResponse(HttpRequestContext& context) override
-        { }
+        {
+            std::ifstream fstream(_fileName);
+            context.responseStream << fstream.rdbuf();
+
+            Response response;
+            response.version(context.request.version());
+            response.keep_alive(false);
+            response.set(http::field::content_type, "text/html");
+
+            beast::ostream(response.body()) << context.responseStream.str();
+
+            response.content_length(response.body().size());
+
+            http::write(
+                context.socket,
+                response);
+            
+            context.socket.shutdown(tcp::socket::shutdown_send);
+        }
     };
     
-    template <class ControllerT, class MethodPtr>
+    template <class Callable, class Controller>
     class ApiEndPoint : public RouterEndPoint
     {
-        const MethodPtr& methodPtr;
-        ControllerT* ptrController;
+        Controller _controller;
+        Callable   _callable;
     public:
-        ApiEndPoint(ControllerT* _ptrController, const MethodPtr& _methodPtr) :
-        ptrController(_ptrController),
-        methodPtr(_methodPtr)
+        ApiEndPoint(Callable callable, Controller controller) :
+        _callable  (callable),
+        _controller(controller)
         { }
 
         void SendResponse(HttpRequestContext& context) override
         {
-            std::invoke(methodPtr, ptrController, context);
+            (_controller->*_callable)(context);
+
             Response response;
             response.version(context.request.version());
             response.keep_alive(false);

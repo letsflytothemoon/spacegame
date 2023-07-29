@@ -52,17 +52,24 @@ public:
     routing<char>::StaticDocumentEndPoint* StaticDocumentEndPoint(std::string path);
 
     routing<char>::StaticDirectoryEndPoint* StaticDirectoryEndPoint(std::string path);
-
-    routing<char>::RouterNode* RouterNode(std::initializer_list<std::pair<const std::string, routing<char>::Router*>> init);
-
-    template <class MethodPtr>
-    routing<char>::ApiEndPoint<SpaceGameServer, MethodPtr>* ApiEndPoint(const MethodPtr& method)
-    { return new routing<char>::ApiEndPoint<SpaceGameServer, MethodPtr>(this, method); }
-
-    void ApiMethodBalls(routing<char>::HttpRequestContext& context)
+    
+    class RouterNode
     {
-        context.responseStream << ".!.";
-    }
+        routing<char>::RouterNode* node;
+    public:
+        RouterNode(std::initializer_list<std::pair<const std::string, routing<char>::Router*>> init) :
+        node(new routing<char>::RouterNode(init))
+        { }
+
+        operator routing<char>::RouterNode*() const
+        { return node; }
+    };
+
+    template <class MethodT>
+    routing<char>::ApiEndPoint<MethodT, SpaceGameServer*>* ApiEndPoint(MethodT method)
+    { return new routing<char>::ApiEndPoint<MethodT, SpaceGameServer*>(method, this); }
+
+    void ApiMethodBalls(routing<char>::HttpRequestContext& context);
 
     SpaceGameServer() :
     router
@@ -78,12 +85,12 @@ public:
         {
             "api",
             RouterNode
-            ({
+            {
                 {
                     "balls",
                     ApiEndPoint(&SpaceGameServer::ApiMethodBalls)
                 }
-            })
+            }
         }
     }
     { }
@@ -93,5 +100,8 @@ public:
     { return ((StorageT&)*this).Add<T>(args ...); }
 
     void Run();
+protected:
+    bool CheckSocketQueueEmpty();
+public:
     tcp::socket GetSocketFromQueue();
 };

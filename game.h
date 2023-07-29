@@ -34,9 +34,9 @@ struct JsonFormatter<VectorT>
     template <class CharT>
     static std::basic_ostream<CharT>& PutToStream(std::basic_ostream<CharT>& stream, const VectorT& vector)
     {
-        stream << StringsConverter<char, CharT>::Convert("{x:");
+        stream << StringsConverter<char, CharT>::Convert("{\"x\":");
         stream << vector.at<0>();
-        stream << StringsConverter<char, CharT>::Convert(",y:");
+        stream << StringsConverter<char, CharT>::Convert(",\"y\":");
         stream << vector.at<1>();
         stream << StringsConverter<char, CharT>::Convert("}");
         return stream;
@@ -90,7 +90,7 @@ public:
     { }
 
     template <class ... Args>
-    Object(Args ... args) :
+    Object(Args&& ... args) :
     Id(Id::Select(args ..., Id(Guid::New())))
     { }
 
@@ -113,7 +113,7 @@ public:
     typename Radius::ValueRefType radius = Radius::RefFrom(*this);
 
     template <class ... Args>
-    MatherialObject(Args ... args) :
+    MatherialObject(Args&& ... args) :
     Object(args ...),
     Mass  (Mass  ::Select(args ..., Mass  (1))),
     Radius(Radius::Select(args ..., Radius(1)))
@@ -140,7 +140,7 @@ public:
     typename Rotation    ::ValueRefType rotation     = Rotation    ::RefFrom(*this);
 
     template <class ... Args>
-    PhysicalObject(Args ... args) :
+    PhysicalObject(Args&& ... args) :
     MatherialObject(args ...),
     Position    (Position    ::Select(args ..., Position    (VectorT(0, 0)))),
     Speed       (Speed       ::Select(args ..., Speed       (VectorT(0, 0)))),

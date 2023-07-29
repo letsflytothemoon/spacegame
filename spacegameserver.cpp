@@ -17,7 +17,6 @@ namespace asio  = boost::asio;
 namespace ip    = asio::ip;
 using     tcp   = ip::tcp;
 
-
 void SpaceGameServer::Run()
 {
     std::thread(&SpaceGameServer::AcceptLoop, this).detach();
@@ -29,7 +28,7 @@ void SpaceGameServer::AcceptLoop()
     try
     {
         ip::address address = ip::make_address("0.0.0.0");
-        unsigned short port = 80;
+        unsigned short port = 12345;
 
         asio::io_context io_context{1};
 
@@ -51,20 +50,32 @@ void SpaceGameServer::AcceptLoop()
     }
 }
 
+bool SpaceGameServer::CheckSocketQueueEmpty()
+{
+    std::lock_guard<std::mutex> lock_guard(connectionsQueueMutex);
+    return connectionsQueue.empty();
+}
+
 tcp::socket SpaceGameServer::GetSocketFromQueue()
 {
     while(true)
     {
+        while(CheckSocketQueueEmpty())
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        
+        std::lock_guard<std::mutex> lock_guard(connectionsQueueMutex);
+        if(!connectionsQueue.empty())
         {
-            std::lock_guard<std::mutex> lock_guard(connectionsQueueMutex);
-            if(!connectionsQueue.empty())
+            
+
+            struct Poper
             {
-                tcp::socket result = std::move(connectionsQueue.front());
-                connectionsQueue.pop();
-                return result;
-            }
+                std::queue<tcp::socket>& _queue;
+                Poper(std::queue<tcp::socket>& queue) : _queue(queue) { }
+                ~Poper() { _queue.pop(); }
+            } poper(connectionsQueue);
+            return std::move(connectionsQueue.front());
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
@@ -78,7 +89,23 @@ routing<char>::StaticDirectoryEndPoint* SpaceGameServer::StaticDirectoryEndPoint
     return new routing<char>::StaticDirectoryEndPoint(path);
 }
 
-routing<char>::RouterNode* SpaceGameServer::RouterNode(std::initializer_list<std::pair<const std::string, routing<char>::Router*>> init)
+void SpaceGameServer::ApiMethodBalls(routing<char>::HttpRequestContext& context)
 {
-    return new routing<char>::RouterNode(init);
+    std::vector<PhysicalObject> vector;
+    {
+        std::lock_guard<std::mutex> lock_guard(storageMutex);
+        std::map<Guid, PhysicalObject*>& map = GetStorage<PhysicalObject>();
+
+
+        for(auto i = map.begin(); i != map.end(); i++)
+            vector.push_back(*i->second);
+    }
+
+    context.responseStream << "[ ";
+    for(int i = 0; i < vector.size(); i++)
+    {
+        if(i > 0) context.responseStream << ", ";
+        context.responseStream << vector[i];
+    }
+    context.responseStream << " ]";
 }
